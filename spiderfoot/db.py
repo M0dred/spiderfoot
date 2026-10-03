@@ -521,6 +521,11 @@ class SpiderFootDb:
 
         qry += " ORDER BY c.data"
 
+        if limit is not None:
+            qry += " LIMIT ? OFFSET ?"
+            qvars.append(int(limit))
+            qvars.append(int(offset))
+
         with self.dbhLock:
             try:
                 self.dbh.execute(qry, qvars)
@@ -884,7 +889,9 @@ class SpiderFootDb:
         data: list = None,
         sourceId: list = None,
         correlationId: str = None,
-        filterFp: bool = False
+        filterFp: bool = False,
+        limit: int = None,
+        offset: int = 0
     ) -> list:
         """Obtain the data for a scan and event type.
 

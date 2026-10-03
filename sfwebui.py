@@ -1744,7 +1744,7 @@ class SpiderFootWebUi:
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def scaneventresults(self: 'SpiderFootWebUi', id: str, eventType: str = None, filterfp: bool = False, correlationId: str = None) -> list:
+    def scaneventresults(self: 'SpiderFootWebUi', id: str, eventType: str = None, filterfp: bool = False, correlationId: str = None, limit: int = None, offset: int = 0, format: str = None) -> list:
         """Return all event results for a scan as JSON.
 
         Args:
@@ -1752,6 +1752,11 @@ class SpiderFootWebUi:
             eventType (str): filter by event type
             filterfp (bool): remove false positives from search results
             correlationId (str): filter by events associated with a correlation
+            limit (int): max rows to return (SQL LIMIT)
+            offset (int): rows to skip (SQL OFFSET)
+            format (str): 'dict' returns named-field objects without HTML
+                escaping and exposes parent_hash; default legacy list format
+                is unchanged for sfcli compatibility
 
         Returns:
             list: scan results
@@ -1764,8 +1769,26 @@ class SpiderFootWebUi:
             eventType = 'ALL'
 
         try:
-            data = dbh.scanResultEvent(id, eventType, filterfp, correlationId=correlationId)
+            data = dbh.scanResultEvent(id, eventType, filterfp, correlationId=correlationId, limit=limit, offset=offset)
         except Exception:
+            return retdata
+
+        if format == 'dict':
+            for row in data:
+                retdata.append({
+                    "lastseen": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(row[0])),
+                    "data": row[1],
+                    "parent_data": row[2],
+                    "module": row[3],
+                    "type": row[4],
+                    "confidence": row[5],
+                    "visibility": row[6],
+                    "risk": row[7],
+                    "hash": row[8],
+                    "parent_hash": row[9],
+                    "false_positive": row[13],
+                    "parent_false_positive": row[14],
+                })
             return retdata
 
         for row in data:
