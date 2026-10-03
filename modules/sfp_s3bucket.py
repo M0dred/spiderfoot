@@ -38,6 +38,7 @@ class sfp_s3bucket(SpiderFootPlugin):
 
     # Default options
     opts = {
+        "require_domain_match": True,
         "endpoints": "s3.amazonaws.com,s3-external-1.amazonaws.com,s3-us-west-1.amazonaws.com,s3-us-west-2.amazonaws.com,s3.ap-south-1.amazonaws.com,s3-ap-south-1.amazonaws.com,s3.ap-northeast-2.amazonaws.com,s3-ap-northeast-2.amazonaws.com,s3-ap-southeast-1.amazonaws.com,s3-ap-southeast-2.amazonaws.com,s3-ap-northeast-1.amazonaws.com,s3.eu-central-1.amazonaws.com,s3-eu-central-1.amazonaws.com,s3-eu-west-1.amazonaws.com,s3-sa-east-1.amazonaws.com",
         "suffixes": "test,dev,web,beta,bucket,space,files,content,data,prod,staging,production,stage,app,media,development,-test,-dev,-web,-beta,-bucket,-space,-files,-content,-data,-prod,-staging,-production,-stage,-app,-media,-development",
         "_maxthreads": 20
@@ -45,6 +46,7 @@ class sfp_s3bucket(SpiderFootPlugin):
 
     # Option descriptions
     optdescs = {
+        "require_domain_match": "Only report CLOUD_STORAGE_BUCKET_OPEN when the bucket name contains the full target domain (dots stripped). Prevents keyword-collision false positives like 'healthbucket' matching health.gov.au.",
         "endpoints": "Different S3 endpoints to check where buckets may exist, as per http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region",
         "suffixes": "List of suffixes to append to domains tried as bucket names",
         "_maxthreads": "Maximum threads"
@@ -196,6 +198,12 @@ class sfp_s3bucket(SpiderFootPlugin):
             self.notifyListeners(evt)
             if bucket[2] != "0":
                 bucketname = bucket[1].replace("//", "")
+                if self.opts['require_domain_match']:
+                    fqdn = eventData.lower().replace('.', '')
+                    label = bucketname.split('.')[0].lower()
+                    if fqdn not in label and eventData.lower().split('.')[0] not in label:
+                        self.debug(f"Bucket {bucketname} open but name does not match {eventData}; candidate only")
+                        continue
                 evt = SpiderFootEvent("CLOUD_STORAGE_BUCKET_OPEN", bucketname + ": " + bucket[2] + " files found.",
                                       self.__name__, evt)
                 self.notifyListeners(evt)

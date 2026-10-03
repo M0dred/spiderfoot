@@ -169,6 +169,14 @@ class sfp_grayhatwarfare(SpiderFootPlugin):
                     evt = SpiderFootEvent('CLOUD_STORAGE_BUCKET', bucketName, self.__name__, event)
                     self.notifyListeners(evt)
 
+                    # Only report OPEN on full-domain match (dots stripped).
+                    # Keyword prefix/suffix hits are dictionary-word collisions
+                    # ('healthbucket' vs health.gov.au) -> keep as candidates.
+                    fqdn = eventData.lower().replace('.', '')
+                    if fqdn not in bucketName.lower().replace('-', '').replace('_', ''):
+                        self.debug(f"Bucket {bucketName} open but weak keyword match; not reporting OPEN")
+                        continue
+
                     evt = SpiderFootEvent('CLOUD_STORAGE_BUCKET_OPEN', f"{bucketName}: {row.get('fileCount')} files found.", self.__name__, event)
                     self.notifyListeners(evt)
 
